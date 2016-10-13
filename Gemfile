@@ -41,7 +41,3 @@ end
 group :test do
   gem "codeclimate-test-reporter", require: nil
 end
-
-group :development do
-  gem "github_changelog_generator"
-end

@@ -1,7 +1,7 @@
 # see http://www.emilsoman.com/blog/2013/05/18/building-a-tested/
 module DeviseTokenAuth
   class SessionsController < DeviseTokenAuth::ApplicationController
-    before_action :set_user_by_token, :only => [:destroy]
+    before_filter :set_user_by_token, :only => [:destroy]
     after_action :reset_session, :only => [:destroy]
 
     def new
@@ -42,7 +42,7 @@ module DeviseTokenAuth
 
         sign_in(:user, @resource, store: false, bypass: false)
 
-        yield @resource if block_given?
+        yield if block_given?
 
         render_create_success
       elsif @resource and not (!@resource.respond_to?(:active_for_authentication?) or @resource.active_for_authentication?)
@@ -53,7 +53,7 @@ module DeviseTokenAuth
     end
 
     def destroy
-      # remove auth instance variables so that after_action does not run
+      # remove auth instance variables so that after_filter does not run
       user = remove_instance_variable(:@resource) if @resource
       client_id = remove_instance_variable(:@client_id) if @client_id
       remove_instance_variable(:@token) if @token
@@ -62,7 +62,7 @@ module DeviseTokenAuth
         user.tokens.delete(client_id)
         user.save!
 
-        yield user if block_given?
+        yield if block_given?
 
         render_destroy_success
       else
@@ -108,7 +108,7 @@ module DeviseTokenAuth
 
     def render_create_success
       render json: {
-        data: resource_data(resource_json: @resource.token_validation_response)
+        data: @resource.token_validation_response
       }
     end
 
@@ -141,7 +141,7 @@ module DeviseTokenAuth
     private
 
     def resource_params
-      params.permit(*params_for_resource(:sign_in))
+      params.permit(devise_parameter_sanitizer.for(:sign_in))
     end
 
   end

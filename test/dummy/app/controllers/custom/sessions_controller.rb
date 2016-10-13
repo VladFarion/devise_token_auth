@@ -2,13 +2,13 @@ class Custom::SessionsController < DeviseTokenAuth::SessionsController
 
   def create
     super do |resource|
-      @create_block_called = true unless resource.nil?
+      @create_block_called = true
     end
   end
 
   def destroy
     super do |resource|
-      @destroy_block_called = true unless resource.nil?
+      @destroy_block_called = true
     end
   end
 

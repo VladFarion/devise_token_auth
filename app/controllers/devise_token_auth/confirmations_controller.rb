@@ -17,7 +17,7 @@ module DeviseTokenAuth
 
         @resource.save!
 
-        yield @resource if block_given?
+        yield if block_given?
 
         redirect_to(@resource.build_auth_url(params[:redirect_url], {
           token:                        token,
