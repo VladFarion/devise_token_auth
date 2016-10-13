@@ -1,24 +1,24 @@
 module DeviseTokenAuth
   class TokenValidationsController < DeviseTokenAuth::ApplicationController
-    skip_before_action :assert_is_devise_resource!, :only => [:validate_token]
-    before_action :set_user_by_token, :only => [:validate_token]
+    skip_before_filter :assert_is_devise_resource!, :only => [:validate_token]
+    before_filter :set_user_by_token, :only => [:validate_token]
 
     def validate_token
       # @resource will have been set by set_user_token concern
       if @resource
-        yield @resource if block_given?
+        yield if block_given?
         render_validate_token_success
       else
         render_validate_token_error
       end
     end
 
-    protected
+    protected 
 
     def render_validate_token_success
       render json: {
         success: true,
-        data: resource_data(resource_json: @resource.token_validation_response)
+        data: @resource.token_validation_response
       }
     end
 

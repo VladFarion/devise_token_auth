@@ -2,19 +2,19 @@ class Custom::PasswordsController < DeviseTokenAuth::PasswordsController
 
   def create
     super do |resource|
-      @create_block_called = true unless resource.nil?
+      @create_block_called = true
     end
   end
 
   def edit
     super do |resource|
-      @edit_block_called = true unless resource.nil?
+      @edit_block_called = true
     end
   end
 
   def update
     super do |resource|
-      @update_block_called = true unless resource.nil?
+      @update_block_called = true
     end
   end
 
