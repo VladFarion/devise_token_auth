@@ -1,7 +1,7 @@
 module DeviseTokenAuth
   class PasswordsController < DeviseTokenAuth::ApplicationController
-    before_action :set_user_by_token, :only => [:update]
-    skip_after_action :update_auth_header, :only => [:create, :edit]
+    before_filter :set_user_by_token, :only => [:update]
+    skip_after_filter :update_auth_header, :only => [:create, :edit]
 
     # this action is responsible for generating password reset tokens and
     # sending emails
@@ -22,7 +22,7 @@ module DeviseTokenAuth
 
       # if whitelist is set, validate redirect_url against whitelist
       if DeviseTokenAuth.redirect_whitelist
-        unless DeviseTokenAuth::Url.whitelisted?(@redirect_url)
+        unless DeviseTokenAuth.redirect_whitelist.include?(@redirect_url)
           return render_create_error_not_allowed_redirect_url
         end
       end
@@ -47,7 +47,7 @@ module DeviseTokenAuth
       @error_status = 400
 
       if @resource
-        yield @resource if block_given?
+        yield if block_given?
         @resource.send_reset_password_instructions({
           email: @email,
           provider: 'email',
@@ -90,11 +90,8 @@ module DeviseTokenAuth
         # ensure that user is confirmed
         @resource.skip_confirmation! if @resource.devise_modules.include?(:confirmable) && !@resource.confirmed_at
 
-        # allow user to change password once without current_password
-        @resource.allow_password_change = true;
-
         @resource.save!
-        yield @resource if block_given?
+        yield if block_given?
 
         redirect_to(@resource.build_auth_url(params[:redirect_url], {
           token:          token,
@@ -124,9 +121,7 @@ module DeviseTokenAuth
       end
 
       if @resource.send(resource_update_method, password_resource_params)
-        @resource.allow_password_change = false
-
-        yield @resource if block_given?
+        yield if block_given?
         return render_update_success
       else
         return render_update_error
@@ -136,10 +131,10 @@ module DeviseTokenAuth
     protected
 
     def resource_update_method
-      if DeviseTokenAuth.check_current_password_before_update == false or @resource.allow_password_change == true
-        "update_attributes"
-      else
+      if DeviseTokenAuth.check_current_password_before_update != false
         "update_with_password"
+      else
+        "update_attributes"
       end
     end
 
@@ -160,15 +155,14 @@ module DeviseTokenAuth
     def render_create_error_not_allowed_redirect_url
       render json: {
         status: 'error',
-        data:   resource_data,
+        data:   @resource.as_json,
         errors: [I18n.t("devise_token_auth.passwords.not_allowed_redirect_url", redirect_url: @redirect_url)]
-      }, status: 422
+      }, status: 403
     end
 
     def render_create_success
       render json: {
         success: true,
-        data: resource_data,
         message: I18n.t("devise_token_auth.passwords.sended", email: @email)
       }
     end
@@ -181,7 +175,9 @@ module DeviseTokenAuth
     end
 
     def render_edit_error
-      raise ActionController::RoutingError.new('Not Found')
+      render json: {
+        success: false
+      }, status: 404
     end
 
     def render_update_error_unauthorized
@@ -208,15 +204,17 @@ module DeviseTokenAuth
     def render_update_success
       render json: {
         success: true,
-        data: resource_data,
-        message: I18n.t("devise_token_auth.passwords.successfully_updated")
+        data: {
+          user: @resource,
+          message: I18n.t("devise_token_auth.passwords.successfully_updated")
+        }
       }
     end
 
     def render_update_error
       return render json: {
         success: false,
-        errors: resource_errors
+        errors: @resource.errors.to_hash.merge(full_messages: @resource.errors.full_messages)
       }, status: 422
     end
 
@@ -227,7 +225,7 @@ module DeviseTokenAuth
     end
 
     def password_resource_params
-      params.permit(*params_for_resource(:account_update))
+      params.permit(devise_parameter_sanitizer.for(:account_update))
     end
 
   end
